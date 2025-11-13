@@ -438,7 +438,7 @@ impl<'ui> DrawListMut<'ui> {
         texture_id: TextureId,
         p_min: impl Into<MintVec2>,
         p_max: impl Into<MintVec2>,
-    ) -> Image<'_> {
+    ) -> Image<'ui> {
         Image::new(self, texture_id, p_min, p_max)
     }
 
@@ -452,7 +452,7 @@ impl<'ui> DrawListMut<'ui> {
         p2: impl Into<MintVec2>,
         p3: impl Into<MintVec2>,
         p4: impl Into<MintVec2>,
-    ) -> ImageQuad<'_> {
+    ) -> ImageQuad<'ui> {
         ImageQuad::new(self, texture_id, p1, p2, p3, p4)
     }
 
@@ -463,7 +463,7 @@ impl<'ui> DrawListMut<'ui> {
         p_min: impl Into<MintVec2>,
         p_max: impl Into<MintVec2>,
         rounding: f32,
-    ) -> ImageRounded<'_> {
+    ) -> ImageRounded<'ui> {
         ImageRounded::new(self, texture_id, p_min, p_max, rounding)
     }
 

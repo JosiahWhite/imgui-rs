@@ -1,9 +1,25 @@
+use bitflags::bitflags;
 use std::f32;
 
 use crate::math::MintVec2;
 use crate::window::WindowFlags;
 use crate::Ui;
 use crate::{sys, Id};
+
+bitflags! {
+    /// Configuration flags for child windows
+    #[repr(transparent)]
+    pub struct ChildWindowFlags: u32 {
+        const BORDER = sys::ImGuiChildFlags_Border;
+        const ALWAYS_USE_WINDOW_PADDING = sys::ImGuiChildFlags_AlwaysUseWindowPadding;
+        const RESIZE_X = sys::ImGuiChildFlags_ResizeX;
+        const RESIZE_Y = sys::ImGuiChildFlags_ResizeY;
+        const AUTO_RESIZE_X = sys::ImGuiChildFlags_AutoResizeX;
+        const AUTO_RESIZE_Y = sys::ImGuiChildFlags_AutoResizeY;
+        const ALWAYS_AUTO_RESIZE = sys::ImGuiChildFlags_AlwaysAutoResize;
+        const FRAME_STYLE = sys::ImGuiChildFlags_FrameStyle;
+    }
+}
 
 /// Builder for a child window
 #[derive(Copy, Clone, Debug)]
@@ -16,7 +32,7 @@ pub struct ChildWindow<'ui> {
     content_size: [f32; 2],
     focused: bool,
     bg_alpha: f32,
-    border: bool,
+    child_flags: ChildWindowFlags,
 }
 
 impl<'ui> ChildWindow<'ui> {
@@ -39,7 +55,7 @@ impl<'ui> ChildWindow<'ui> {
             content_size: [0.0, 0.0],
             focused: false,
             bg_alpha: f32::NAN,
-            border: false,
+            child_flags: ChildWindowFlags::empty(),
         }
     }
 
@@ -92,7 +108,7 @@ impl<'ui> ChildWindow<'ui> {
     /// Disabled by default.
     #[inline]
     pub fn border(mut self, border: bool) -> Self {
-        self.border = border;
+        self.child_flags.set(ChildWindowFlags::BORDER, border);
         self
     }
     /// Enables/disables moving the window when child window is dragged.
@@ -204,8 +220,8 @@ impl<'ui> ChildWindow<'ui> {
     /// Disabled by default.
     #[inline]
     pub fn always_use_window_padding(mut self, value: bool) -> Self {
-        self.flags
-            .set(WindowFlags::ALWAYS_USE_WINDOW_PADDING, value);
+        self.child_flags
+            .set(ChildWindowFlags::ALWAYS_USE_WINDOW_PADDING, value);
         self
     }
     /// Enables/disables gamepad/keyboard navigation within the window.
@@ -270,7 +286,7 @@ impl<'ui> ChildWindow<'ui> {
             sys::igBeginChild_ID(
                 self.id,
                 self.size.into(),
-                self.border,
+                self.child_flags.bits() as i32,
                 self.flags.bits() as i32,
             )
         };

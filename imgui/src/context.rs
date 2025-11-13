@@ -452,7 +452,7 @@ fn test_ini_load_save() {
     let data = "[Window][Debug##Default]
 Pos=60,60
 Size=400,400
-Collapsed=0";
+Collapsed=1";
     ctx.load_ini_settings(data);
     let mut buf = String::new();
     ctx.save_ini_settings(&mut buf);

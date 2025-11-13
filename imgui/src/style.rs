@@ -103,6 +103,9 @@ pub struct Style {
     /// `= 0.0`: always show when hovering
     /// `= f32::MAX`: never show close button unless selected
     pub tab_min_width_for_close_button: f32,
+    pub tab_bar_border_size: f32,
+    pub table_angled_headers_angle: f32,
+    pub table_angled_headers_text_align: [f32; 2],
     /// Side of the color buttonton pubin color editor widgets (left/right).
     pub color_button_position: Direction,
     /// Alignment of button text when button is larger than text.
@@ -125,6 +128,7 @@ pub struct Style {
     ///
     /// Also applies to popups/tooltips in addition to regular windows.
     pub display_safe_area_padding: [f32; 2],
+    #[cfg(feature = "docking")]
     pub docking_separator_size: f32,
     /// Scale software-rendered mouse cursor.
     ///
@@ -668,6 +672,9 @@ fn test_style_memory_layout() {
     assert_field_offset!(tab_rounding, TabRounding);
     assert_field_offset!(tab_border_size, TabBorderSize);
     assert_field_offset!(tab_min_width_for_close_button, TabMinWidthForCloseButton);
+    assert_field_offset!(tab_bar_border_size, TabBarBorderSize);
+    assert_field_offset!(table_angled_headers_angle, TableAngledHeadersAngle);
+    assert_field_offset!(table_angled_headers_text_align, TableAngledHeadersTextAlign);
     assert_field_offset!(color_button_position, ColorButtonPosition);
     assert_field_offset!(button_text_align, ButtonTextAlign);
     assert_field_offset!(selectable_text_align, SelectableTextAlign);

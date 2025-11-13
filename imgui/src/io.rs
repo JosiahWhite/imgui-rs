@@ -109,61 +109,6 @@ bitflags! {
     }
 }
 
-/// An input identifier for navigation
-#[repr(u32)]
-#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
-pub enum NavInput {
-    Activate = sys::ImGuiNavInput_Activate,
-    Cancel = sys::ImGuiNavInput_Cancel,
-    Input = sys::ImGuiNavInput_Input,
-    Menu = sys::ImGuiNavInput_Menu,
-    DpadLeft = sys::ImGuiNavInput_DpadLeft,
-    DpadRight = sys::ImGuiNavInput_DpadRight,
-    DpadUp = sys::ImGuiNavInput_DpadUp,
-    DpadDown = sys::ImGuiNavInput_DpadDown,
-    LStickLeft = sys::ImGuiNavInput_LStickLeft,
-    LStickRight = sys::ImGuiNavInput_LStickRight,
-    LStickUp = sys::ImGuiNavInput_LStickUp,
-    LStickDown = sys::ImGuiNavInput_LStickDown,
-    FocusPrev = sys::ImGuiNavInput_FocusPrev,
-    FocusNext = sys::ImGuiNavInput_FocusNext,
-    TweakSlow = sys::ImGuiNavInput_TweakSlow,
-    TweakFast = sys::ImGuiNavInput_TweakFast,
-}
-
-impl NavInput {
-    /// All possible `NavInput` variants
-    pub const VARIANTS: [NavInput; NavInput::COUNT] = [
-        NavInput::Activate,
-        NavInput::Cancel,
-        NavInput::Input,
-        NavInput::Menu,
-        NavInput::DpadLeft,
-        NavInput::DpadRight,
-        NavInput::DpadUp,
-        NavInput::DpadDown,
-        NavInput::LStickLeft,
-        NavInput::LStickRight,
-        NavInput::LStickUp,
-        NavInput::LStickDown,
-        NavInput::FocusPrev,
-        NavInput::FocusNext,
-        NavInput::TweakSlow,
-        NavInput::TweakFast,
-    ];
-    /// Amount of internal/hidden variants (not exposed by imgui-rs)
-    const INTERNAL_COUNT: usize = 0;
-    /// Total count of `NavInput` variants
-    pub const COUNT: usize = sys::ImGuiNavInput_COUNT as usize - NavInput::INTERNAL_COUNT;
-}
-
-#[test]
-fn test_nav_input_variants() {
-    for (idx, &value) in NavInput::VARIANTS.iter().enumerate() {
-        assert_eq!(idx, value as usize);
-    }
-}
-
 /// Settings and inputs/outputs for imgui-rs
 #[repr(C)]
 pub struct Io {
@@ -259,6 +204,7 @@ pub struct Io {
     /// When holding a key/button, rate at which it repeats, in seconds
     pub key_repeat_rate: f32,
 
+    pub config_debug_is_debugger_present: bool,
     pub config_debug_begin_return_value_once: bool,
     pub config_debug_begin_return_value_loop: bool,
     pub config_debug_ignore_focus_loss: bool,
@@ -280,7 +226,6 @@ pub struct Io {
             data: *mut sys::ImGuiPlatformImeData,
         ),
     >,
-    unused_padding: *mut c_void,
     pub platform_locale_decimal_point: ImWchar,
     /// When true, imgui-rs will use the mouse inputs, so do not dispatch them to your main
     /// game/application
@@ -318,23 +263,11 @@ pub struct Io {
     pub metrics_render_windows: i32,
     /// Number of active windows
     pub metrics_active_windows: i32,
-    /// Number of active internal imgui-rs allocations
-    pub metrics_active_allocations: i32,
     /// Mouse delta.
     ///
     /// Note that this is zero if either current or previous position is invalid ([f32::MAX,
     /// f32::MAX]), so a disappearing/reappearing mouse won't have a huge delta.
     pub mouse_delta: [f32; 2],
-    /// Map of indices into the `keys_down` entries array, which represent your "native" keyboard
-    /// state
-    pub key_map: [u32; sys::ImGuiKey_COUNT as usize],
-    /// Keyboard keys that are pressed (indexing defined by the user/application)
-    pub keys_down: [bool; sys::ImGuiKey_COUNT as usize],
-    /// Gamepad inputs.
-    ///
-    /// Cleared back to zero after each frame. Keyboard keys will be auto-mapped and written
-    /// here by `frame()`.
-    pub nav_inputs: [f32; NavInput::COUNT + NavInput::INTERNAL_COUNT],
     pub ctx: *mut ImGuiContext,
     /// Mouse position, in pixels.
     ///
@@ -363,7 +296,7 @@ pub struct Io {
     /// Keyboard modifier pressed: Cmd/Super/Windows
     pub key_super: bool,
     key_mods: sys::ImGuiKeyChord,
-    keys_data: [sys::ImGuiKeyData; sys::ImGuiKey_COUNT as usize],
+    keys_data: [sys::ImGuiKeyData; sys::ImGuiKey_NamedKey_COUNT as usize],
 
     pub want_capture_mouse_unless_popup_close: bool,
 
@@ -378,6 +311,7 @@ pub struct Io {
     mouse_down_owned: [bool; 5],
     mouse_down_owned_unless_popup_close: [bool; 5],
     mouse_wheel_request_axis_swap: bool,
+    mouse_ctrl_left_as_right_click: bool,
     mouse_down_duration: [f32; 5],
     mouse_down_duration_prev: [f32; 5],
     #[cfg(feature = "docking")]
@@ -390,7 +324,7 @@ pub struct Io {
     /// the Alt menu toggle)
     pub app_focus_lost: bool,
 
-    app_accepting_events: bool,
+    pub app_accepting_events: bool,
     backend_using_legacy_key_arrays: sys::ImS8,
     backend_using_legacy_nav_input_array: bool,
 
@@ -470,32 +404,6 @@ impl Io {
         unsafe {
             sys::ImGuiIO_AddKeyAnalogEvent(self.raw_mut(), key as u32, down, value);
         }
-    }
-}
-
-impl Index<Key> for Io {
-    type Output = u32;
-    fn index(&self, index: Key) -> &u32 {
-        &self.key_map[index as usize]
-    }
-}
-
-impl IndexMut<Key> for Io {
-    fn index_mut(&mut self, index: Key) -> &mut u32 {
-        &mut self.key_map[index as usize]
-    }
-}
-
-impl Index<NavInput> for Io {
-    type Output = f32;
-    fn index(&self, index: NavInput) -> &f32 {
-        &self.nav_inputs[index as usize]
-    }
-}
-
-impl IndexMut<NavInput> for Io {
-    fn index_mut(&mut self, index: NavInput) -> &mut f32 {
-        &mut self.nav_inputs[index as usize]
     }
 }
 
@@ -580,7 +488,6 @@ fn test_io_memory_layout() {
             assert_field_offset!(set_clipboard_text_fn, SetClipboardTextFn);
             assert_field_offset!(clipboard_user_data, ClipboardUserData);
             assert_field_offset!(set_platform_ime_data_fn, SetPlatformImeDataFn);
-            assert_field_offset!(unused_padding, _UnusedPadding);
             assert_field_offset!(want_capture_mouse, WantCaptureMouse);
             assert_field_offset!(want_capture_keyboard, WantCaptureKeyboard);
             assert_field_offset!(want_text_input, WantTextInput);
@@ -593,11 +500,7 @@ fn test_io_memory_layout() {
             assert_field_offset!(metrics_render_indices, MetricsRenderIndices);
             assert_field_offset!(metrics_render_windows, MetricsRenderWindows);
             assert_field_offset!(metrics_active_windows, MetricsActiveWindows);
-            assert_field_offset!(metrics_active_allocations, MetricsActiveAllocations);
             assert_field_offset!(mouse_delta, MouseDelta);
-            assert_field_offset!(key_map, KeyMap);
-            assert_field_offset!(keys_down, KeysDown);
-            assert_field_offset!(nav_inputs, NavInputs);
             assert_field_offset!(mouse_pos, MousePos);
             assert_field_offset!(mouse_down, MouseDown);
             assert_field_offset!(mouse_wheel, MouseWheel);

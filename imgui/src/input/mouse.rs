@@ -122,7 +122,13 @@ impl Ui {
     /// Returns true if the given mouse button was double-clicked
     #[doc(alias = "IsMouseDoubleClicked")]
     pub fn is_mouse_double_clicked(&self, button: MouseButton) -> bool {
-        unsafe { sys::igIsMouseDoubleClicked(button as i32) }
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "docking")] {
+                unsafe { sys::igIsMouseDoubleClicked_Nil(button as i32) }
+            } else {
+                unsafe { sys::igIsMouseDoubleClicked(button as i32) }
+            }
+        }
     }
     /// Returns true if the given mouse button was released (went from down to !down)
     #[doc(alias = "IsMouseReleased")]
@@ -325,7 +331,7 @@ fn test_mouse_double_click() {
             let _ = ctx.render();
         }
         {
-            ctx.io_mut()[button] = true;
+            ctx.io_mut().add_mouse_button_event(button, true);
             let ui = ctx.new_frame();
             assert!(ui.is_mouse_clicked(button));
             assert!(!ui.is_mouse_double_clicked(button));
@@ -338,14 +344,14 @@ fn test_mouse_double_click() {
             let _ = ctx.render();
         }
         {
-            ctx.io_mut()[button] = false;
+            ctx.io_mut().add_mouse_button_event(button, false);
             let ui = ctx.new_frame();
             assert!(!ui.is_mouse_clicked(button));
             assert!(!ui.is_mouse_double_clicked(button));
             let _ = ctx.render();
         }
         {
-            ctx.io_mut()[button] = true;
+            ctx.io_mut().add_mouse_button_event(button, true);
             let ui = ctx.new_frame();
             assert!(ui.is_mouse_clicked(button));
             assert!(ui.is_mouse_double_clicked(button));
@@ -369,7 +375,7 @@ fn test_mouse_double_click() {
             let _ = ctx.render();
         }
         {
-            ctx.io_mut()[button] = true;
+            ctx.io_mut().add_mouse_button_event(button, true);
             let ui = ctx.new_frame();
             assert!(ui.is_mouse_clicked(button));
             assert!(!ui.is_mouse_double_clicked(button));
@@ -382,14 +388,14 @@ fn test_mouse_double_click() {
             let _ = ctx.render();
         }
         {
-            ctx.io_mut()[button] = false;
+            ctx.io_mut().add_mouse_button_event(button, false);
             let ui = ctx.new_frame();
             assert!(!ui.is_mouse_clicked(button));
             assert!(!ui.is_mouse_double_clicked(button));
             let _ = ctx.render();
         }
         {
-            ctx.io_mut()[button] = true;
+            ctx.io_mut().add_mouse_button_event(button, true);
             let ui = ctx.new_frame();
             assert!(ui.is_mouse_clicked(button));
             assert!(!ui.is_mouse_double_clicked(button));
